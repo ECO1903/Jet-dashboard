@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAYA N599CH — Jet Expense Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<style>
+:root {
+  --bg:#0d1117; --surface:#161b22; --surface2:#1c2230; --surface3:#222d40;
+  --border:#2a3448; --accent:#2563eb; --accent2:#0ea5e9;
+  --gold:#f59e0b; --green:#10b981; --red:#ef4444; --purple:#8b5cf6;
+  --text:#e6edf3; --muted:#7d8da8;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+.header{background:linear-gradient(135deg,#0d1117 0%,#1a2540 100%);border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;}
+.header-left{display:flex;align-items:center;gap:12px;}
+.plane-icon{font-size:26px;}
+.header h1{font-size:19px;font-weight:700;}
+.header p{font-size:11px;color:var(--muted);margin-top:2px;}
+.live-badge{background:rgba(16,185,129,.15);border:1px solid var(--green);color:var(--green);font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;}
+
+.ctrl-row{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 28px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;}
+.ctrl-row.compare-row{background:rgba(139,92,246,.05);border-bottom:1px solid rgba(139,92,246,.25);}
+.ctrl-group{display:flex;flex-direction:column;gap:4px;}
+.ctrl-group label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+select{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;min-width:110px;}
+select:focus{outline:none;border-color:var(--accent);}
+.period-btns{display:flex;gap:3px;flex-wrap:wrap;}
+.period-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.period-btn:hover{border-color:var(--accent2);color:var(--accent2);}
+.period-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+.period-tag{font-size:12px;color:var(--accent2);font-weight:700;padding:6px 2px;min-width:160px;}
+.compare-tag{font-size:12px;color:#c4b5fd;font-weight:700;padding:6px 2px;min-width:160px;}
+.sec-label{font-size:11px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:.5px;padding:6px 0;align-self:center;}
+.divider{width:1px;background:var(--border);align-self:stretch;margin:0 4px;}
+.toggle-compare-btn{background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.35);color:#a78bfa;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.toggle-compare-btn:hover{background:rgba(139,92,246,.22);}
+.toggle-compare-btn.on{background:#7c3aed;border-color:#7c3aed;color:#fff;}
+#cmpRow{border-left:2px solid rgba(139,92,246,.4);padding-left:14px;margin-left:4px;}
+
+.kpi-area{padding:14px 28px 4px;}
+.kpi-sec-hdr{font-size:15px;font-weight:800;color:var(--text);letter-spacing:.2px;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.kpi-sec-hdr i{display:inline-block;width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:6px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:15px 17px;position:relative;overflow:hidden;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.kpi.kpi-blue::before{background:var(--accent);}
+.kpi.kpi-gold::before{background:var(--gold);}
+.kpi.kpi-green::before{background:var(--green);}
+.kpi.kpi-sky::before{background:var(--accent2);}
+.kpi.cmp-kpi{background:rgba(139,92,246,.07);border-color:rgba(139,92,246,.25);}
+.kpi.cmp-kpi::before{background:var(--purple)!important;}
+.kpi-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;}
+.kpi-val{font-size:23px;font-weight:700;line-height:1;}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+.kpi-delta{font-size:11px;font-weight:700;margin-top:5px;}
+.delta-bad{color:var(--red);}
+.delta-good{color:var(--green);}
+
+.connectors{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;padding:2px 0 4px;}
+.conn-cell{display:flex;justify-content:center;}
+.conn-arr{font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;}
+.arr-bad{background:rgba(239,68,68,.15);color:var(--red);}
+.arr-good{background:rgba(16,185,129,.15);color:var(--green);}
+.arr-neu{background:rgba(125,141,168,.1);color:var(--muted);}
+
+.cat-filters{display:flex;flex-wrap:wrap;gap:5px;padding:10px 28px 10px;}
+.cf-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:11px;padding:3px 9px;border-radius:10px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.cf-btn:hover{border-color:var(--accent2);color:var(--accent2);}
+.cf-btn.active{color:#fff;border-color:transparent;}
+.cf-lbl{font-size:10px;color:var(--muted);padding:3px 0;align-self:center;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-right:3px;}
+
+.info-bar{background:rgba(37,99,235,.07);border:1px solid rgba(37,99,235,.18);border-radius:7px;padding:7px 14px;margin:0 28px 12px;font-size:11px;color:var(--accent2);}
+
+.main-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:0 28px 24px;}
+.full{grid-column:1/-1;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:17px;}
+.card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;}
+.card-title{font-size:13px;font-weight:700;}
+.card-badge{font-size:10px;background:rgba(37,99,235,.14);color:var(--accent2);padding:2px 7px;border-radius:4px;}
+.chart-wrap{position:relative;height:250px;}
+
+.cat-row{display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid rgba(42,52,72,.45);}
+.cat-row:last-child{border-bottom:none;}
+.cat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.cat-name{font-size:12px;min-width:132px;}
+.cat-bar-wrap{flex:1;height:5px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden;}
+.cat-bar{height:100%;border-radius:3px;transition:width .4s;}
+.cat-amt{font-size:11px;font-weight:600;min-width:78px;text-align:right;}
+.cat-cmp{font-size:10px;min-width:52px;text-align:right;color:#c4b5fd;}
+.cat-diff{font-size:10px;min-width:44px;text-align:right;}
+.cat-pct{font-size:10px;color:var(--muted);min-width:32px;text-align:right;}
+
+.tbl{width:100%;border-collapse:collapse;font-size:11px;}
+.tbl th{color:var(--muted);font-weight:700;text-transform:uppercase;font-size:9px;letter-spacing:.4px;padding:5px 7px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;}
+.tbl th:first-child{text-align:left;}
+.tbl th.th-c{color:#c4b5fd;}
+.tbl td{padding:5px 7px;border-bottom:1px solid rgba(42,52,72,.3);text-align:right;}
+.tbl td:first-child{text-align:left;font-weight:600;}
+.tbl tr:hover td{background:rgba(37,99,235,.04);}
+.tbl tr.tot td{color:var(--accent2);font-weight:700;background:rgba(14,165,233,.05);border-top:1px solid rgba(14,165,233,.18);}
+.tbl td.tc{color:#c4b5fd;font-size:10px;}
+.tbl-wrap{max-height:310px;overflow-y:auto;}
+.tbl-wrap::-webkit-scrollbar{width:3px;}
+.tbl-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+/* ── Cost Spike Alert Cards ── */
+.alert-card{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:16px 18px;position:relative;overflow:hidden;}
+.alert-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#ef4444,#f97316);}
+.alert-cat{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px;}
+.alert-name{font-size:14px;font-weight:800;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.alert-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.alert-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;}
+.alert-lbl{font-size:11px;color:var(--muted);}
+.alert-val{font-size:13px;font-weight:700;color:var(--text);}
+.alert-divider{border:none;border-top:1px solid rgba(239,68,68,.2);margin:8px 0;}
+.alert-pct{font-size:18px;font-weight:800;color:#ef4444;}
+.alert-abs{font-size:12px;font-weight:600;color:#f97316;}
+.alert-bar-wrap{height:5px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden;margin-top:10px;}
+.alert-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#ef4444,#f97316);}
+
+@media(max-width:860px){
+  .kpis{grid-template-columns:repeat(2,1fr);}
+  .main-grid{grid-template-columns:1fr;}
+  .full{grid-column:1;}
+  .ctrl-row,.kpi-area,.cat-filters,.info-bar,.main-grid{padding-left:14px;padding-right:14px;}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="plane-icon">✈</div>
+    <div><h1>GAYA N599CH — Operations Dashboard</h1><p>Jet Expense & Flight Performance Analysis · All figures in EUR</p></div>
+  </div>
+  <div class="live-badge">● LIVE DATA</div>
+</div>
+
+<!-- SINGLE UNIFIED TOOLBAR -->
+<div class="ctrl-row" style="flex-wrap:wrap;row-gap:10px;">
+
+  <!-- ── PRIMARY SIDE ── -->
+  <div class="ctrl-group">
+    <label>📅 Analysis Period</label>
+    <div class="period-btns">
+      <button class="period-btn" id="btn-month"   onclick="setPT('month')">Monthly</button>
+      <button class="period-btn" id="btn-quarter" onclick="setPT('quarter')">Quarterly</button>
+      <button class="period-btn" id="btn-year"    onclick="setPT('year')">Annual</button>
+      <button class="period-btn active" id="btn-ytd" onclick="setPT('ytd')">YTD</button>
+      <button class="period-btn" id="btn-qtd"     onclick="setPT('qtd')">QTD</button>
+      <button class="period-btn" id="btn-mtd"     onclick="setPT('mtd')">MTD</button>
+    </div>
+  </div>
+
+  <div class="ctrl-group">
+    <label>Year</label>
+    <select id="pYear" onchange="render()">
+      <option value="2023">2023</option><option value="2024">2024</option>
+      <option value="2025">2025</option><option value="2026" selected>2026</option>
+    </select>
+  </div>
+  <div class="ctrl-group" id="p-m-ctrl" style="display:none">
+    <label>Month</label>
+    <select id="pMonth" onchange="render()">
+      <option value="1">January</option><option value="2">February</option><option value="3" selected>March</option>
+      <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+      <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+      <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+    </select>
+  </div>
+  <div class="ctrl-group" id="p-q-ctrl" style="display:none">
+    <label>Quarter</label>
+    <select id="pQuarter" onchange="render()">
+      <option value="1">Q1 (Jan–Mar)</option><option value="2">Q2 (Apr–Jun)</option>
+      <option value="3">Q3 (Jul–Sep)</option><option value="4">Q4 (Oct–Dec)</option>
+    </select>
+  </div>
+  <div class="ctrl-group">
+    <label>Period</label>
+    <div class="period-tag" id="pLabel">—</div>
+  </div>
+
+  <!-- ── DIVIDER + COMPARE TOGGLE ── -->
+  <div class="divider"></div>
+  <div class="ctrl-group" style="align-self:flex-end;">
+    <label style="color:#a78bfa;">⚖ Compare Period</label>
+    <button class="toggle-compare-btn" id="toggleCmpBtn" onclick="toggleCompare()">＋ Enable</button>
+  </div>
+
+  <!-- ── COMPARE SIDE (hidden until enabled) ── -->
+  <div id="cmpRow" style="display:none;align-items:flex-end;gap:12px;flex-wrap:wrap;">
+    <div class="ctrl-group">
+      <label style="color:#a78bfa;">Compare Type</label>
+      <div class="period-btns">
+        <button class="period-btn" id="cbtn-month"   onclick="setCPT('month')">Monthly</button>
+        <button class="period-btn" id="cbtn-quarter" onclick="setCPT('quarter')">Quarterly</button>
+        <button class="period-btn active" id="cbtn-year" onclick="setCPT('year')">Annual</button>
+        <button class="period-btn" id="cbtn-ytd"     onclick="setCPT('ytd')">YTD</button>
+        <button class="period-btn" id="cbtn-qtd"     onclick="setCPT('qtd')">QTD</button>
+        <button class="period-btn" id="cbtn-mtd"     onclick="setCPT('mtd')">MTD</button>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <label style="color:#a78bfa;">Year</label>
+      <select id="cYear" onchange="render()">
+        <option value="2023">2023</option><option value="2024">2024</option>
+        <option value="2025" selected>2025</option><option value="2026">2026</option>
+      </select>
+    </div>
+    <div class="ctrl-group" id="c-m-ctrl" style="display:none">
+      <label style="color:#a78bfa;">Month</label>
+      <select id="cMonth" onchange="render()">
+        <option value="1">January</option><option value="2">February</option><option value="3" selected>March</option>
+        <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+        <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+        <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+      </select>
+    </div>
+    <div class="ctrl-group" id="c-q-ctrl" style="display:none">
+      <label style="color:#a78bfa;">Quarter</label>
+      <select id="cQuarter" onchange="render()">
+        <option value="1">Q1 (Jan–Mar)</option><option value="2">Q2 (Apr–Jun)</option>
+        <option value="3">Q3 (Jul–Sep)</option><option value="4">Q4 (Oct–Dec)</option>
+      </select>
+    </div>
+    <div class="ctrl-group">
+      <label style="color:#a78bfa;">Compare Period</label>
+      <div class="compare-tag" id="cLabel">—</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- CAT FILTERS -->
+<div class="cat-filters" id="catFilters"></div>
+
+<!-- INFO BAR -->
+<div class="info-bar" id="infoBar"></div>
+
+<!-- KPI AREA -->
+<div class="kpi-area">
+  <div class="kpi-sec-hdr"><i style="background:var(--accent)"></i><span id="kpiPL">Primary Period</span></div>
+  <div class="kpis">
+    <div class="kpi kpi-blue"><div class="kpi-lbl">Cost / Flight Hour</div><div class="kpi-val" id="k-cph">—</div><div class="kpi-sub">EUR per hour</div><div class="kpi-delta" id="k-cph-d"></div></div>
+    <div class="kpi kpi-gold"><div class="kpi-lbl">Fuel Cost / Flight Hour</div><div class="kpi-val" id="k-fph">—</div><div class="kpi-sub">EUR per hour</div><div class="kpi-delta" id="k-fph-d"></div></div>
+    <div class="kpi kpi-green"><div class="kpi-lbl">Total Flight Hours</div><div class="kpi-val" id="k-hrs">—</div><div class="kpi-sub">Block: <span id="k-blk">—</span></div><div class="kpi-delta" id="k-hrs-d"></div></div>
+    <div class="kpi kpi-sky"><div class="kpi-lbl">Total Costs</div><div class="kpi-val" id="k-tot">—</div><div class="kpi-sub">EUR for period</div><div class="kpi-delta" id="k-tot-d"></div></div>
+  </div>
+
+  <div class="connectors" id="connectors" style="display:none">
+    <div class="conn-cell" id="cn-cph"></div>
+    <div class="conn-cell" id="cn-fph"></div>
+    <div class="conn-cell" id="cn-hrs"></div>
+    <div class="conn-cell" id="cn-tot"></div>
+  </div>
+
+  <div id="cmpKpiArea" style="display:none">
+    <div class="kpi-sec-hdr"><i style="background:var(--purple)"></i><span id="kpiCL">Compare Period</span></div>
+    <div class="kpis">
+      <div class="kpi cmp-kpi"><div class="kpi-lbl">Cost / Flight Hour</div><div class="kpi-val" id="ck-cph">—</div><div class="kpi-sub">EUR per hour</div></div>
+      <div class="kpi cmp-kpi"><div class="kpi-lbl">Fuel Cost / Flight Hour</div><div class="kpi-val" id="ck-fph">—</div><div class="kpi-sub">EUR per hour</div></div>
+      <div class="kpi cmp-kpi"><div class="kpi-lbl">Total Flight Hours</div><div class="kpi-val" id="ck-hrs">—</div><div class="kpi-sub">Block: <span id="ck-blk">—</span></div></div>
+      <div class="kpi cmp-kpi"><div class="kpi-lbl">Total Costs</div><div class="kpi-val" id="ck-tot">—</div><div class="kpi-sub">EUR for period</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN GRID -->
+<div class="main-grid">
+  <!-- LEFT: Cost/Hr Trend — last 3 months with bar labels -->
+  <div class="card">
+    <div class="card-hdr"><div class="card-title">📈 Cost / Flight Hour — Last 3 Months</div><div class="card-badge">€/hr labelled · bars = flight hours</div></div>
+    <div class="chart-wrap" style="height:280px"><canvas id="trendChart"></canvas></div>
+  </div>
+  <!-- RIGHT: Key cost categories — last 3 months stacked comparison -->
+  <div class="card">
+    <div class="card-hdr"><div class="card-title">🔑 Key Cost Categories — Last 3 Months</div><div class="card-badge">Fuel · Maintenance · Handling · Crew</div></div>
+    <div class="chart-wrap" style="height:280px"><canvas id="keyCatChart"></canvas></div>
+  </div>
+  <!-- FULL WIDTH: Category breakdown -->
+  <div class="card full">
+    <div class="card-hdr"><div class="card-title">💼 Cost Breakdown by Category</div><div class="card-badge" id="catBadge">—</div></div>
+    <div id="catBreakdown" style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px;"></div>
+  </div>
+  <!-- FULL WIDTH: Monthly detail table -->
+  <div class="card full">
+    <div class="card-hdr"><div class="card-title">📋 Monthly Detail</div><div class="card-badge">selected period</div></div>
+    <div class="tbl-wrap"><table class="tbl"><thead id="tblHead"></thead><tbody id="tblBody"></tbody></table></div>
+  </div>
+  <!-- FULL WIDTH: Cost spike alerts -->
+  <div class="card full" id="alertCard">
+    <div class="card-hdr">
+      <div class="card-title">🚨 Cost Spike Alerts — Current Month vs 6-Month Average</div>
+      <div class="card-badge" id="alertBadge">top 3 · &gt;15% &amp; &gt;€7,000 deviation</div>
+    </div>
+    <div id="alertBody" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;"></div>
+    <div id="alertEmpty" style="display:none;color:var(--green);font-size:13px;padding:12px 0;">
+      ✅ No cost categories are deviating more than 15% and €7,000 above their 6-month average this month.
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════ DATA ═══════════════
+const RM=[{"Y": 2023,"M": "Jan","mn": 1,"T": 401033,"fh": 40.3,"bh": 42.6},{"Y": 2023,"M": "Feb","mn": 2,"T": 339257,"fh": 26.9,"bh": 29},{"Y": 2023,"M": "Mar","mn": 3,"T": 546776,"fh": 23.2,"bh": 24.5},{"Y": 2023,"M": "Apr","mn": 4,"T": 365736,"fh": 20.8,"bh": 22.1},{"Y": 2023,"M": "May","mn": 5,"T": 578317,"fh": 39.2,"bh": 40.9},{"Y": 2023,"M": "Jun","mn": 6,"T": 478667,"fh": 60.0,"bh": 64.8},{"Y": 2023,"M": "Jul","mn": 7,"T": 389001,"fh": 51.3,"bh": 54.2},{"Y": 2023,"M": "Aug","mn": 8,"T": 366123,"fh": 19.9,"bh": 22.6},{"Y": 2023,"M": "Sep","mn": 9,"T": 394126,"fh": 16.6,"bh": 17.5},{"Y": 2023,"M": "Oct","mn": 10,"T": 258063,"fh": 0,"bh": 0},{"Y": 2023,"M": "Nov","mn": 11,"T": 236508,"fh": 24.4,"bh": 27.5},{"Y": 2023,"M": "Dec","mn": 12,"T": 318680,"fh": 12.2,"bh": 14.6},{"Y": 2024,"M": "Jan","mn": 1,"T": 341130,"fh": 35.6,"bh": 38.9},{"Y": 2024,"M": "Feb","mn": 2,"T": 385454,"fh": 24,"bh": 25.9},{"Y": 2024,"M": "Mar","mn": 3,"T": 532768,"fh": 64.65,"bh": 68.23},{"Y": 2024,"M": "Apr","mn": 4,"T": 581598,"fh": 23,"bh": 24.4},{"Y": 2024,"M": "May","mn": 5,"T": 471616,"fh": 28.25,"bh": 31.55},{"Y": 2024,"M": "Jun","mn": 6,"T": 440223,"fh": 24.05,"bh": 28.27},{"Y": 2024,"M": "Jul","mn": 7,"T": 531785,"fh": 54.55,"bh": 57.92},{"Y": 2024,"M": "Aug","mn": 8,"T": 491225,"fh": 37.97,"bh": 39.98},{"Y": 2024,"M": "Sep","mn": 9,"T": 393698,"fh": 58.47,"bh": 61.42},{"Y": 2024,"M": "Oct","mn": 10,"T": 300791,"fh": 60.98,"bh": 64.17},{"Y": 2024,"M": "Nov","mn": 11,"T": 375984,"fh": 28.05,"bh": 7.75},{"Y": 2024,"M": "Dec","mn": 12,"T": 295346,"fh": 28.32,"bh": 29.78},{"Y": 2025,"M": "Jan","mn": 1,"T": 457428,"fh": 64.57,"bh": 67.53},{"Y": 2025,"M": "Feb","mn": 2,"T": 431848,"fh": 56.38,"bh": 59.43},{"Y": 2025,"M": "Mar","mn": 3,"T": 463978,"fh": 15.78,"bh": 16.57},{"Y": 2025,"M": "Apr","mn": 4,"T": 347076,"fh": 9.88,"bh": 10.4},{"Y": 2025,"M": "May","mn": 5,"T": 528571,"fh": 69.45,"bh": 69.66},{"Y": 2025,"M": "Jun","mn": 6,"T": 506681,"fh": 56.2,"bh": 59.27},{"Y": 2025,"M": "Jul","mn": 7,"T": 334287,"fh": 38.28,"bh": 40.03},{"Y": 2025,"M": "Aug","mn": 8,"T": 403894,"fh": 40.82,"bh": 42.68},{"Y": 2025,"M": "Sep","mn": 9,"T": 448265,"fh": 19.28,"bh": 20.25},{"Y": 2025,"M": "Oct","mn": 10,"T": 338886,"fh": 37.9,"bh": 39.53},{"Y": 2025,"M": "Nov","mn": 11,"T": 434226,"fh": 35.12,"bh": 37.3},{"Y": 2025,"M": "Dec","mn": 12,"T": 454662,"fh": 59.7,"bh": 62.33},{"Y": 2026,"M": "Jan","mn": 1,"T": 410108,"fh": 24.97,"bh": 26.03}];
+
+const RC=[{"Y": 2023,"mn": 7,"M": "Jul","S": "CATERING","V": 727},{"Y": 2023,"mn": 12,"M": "Dec","S": "CATERING","V": 1433},{"Y": 2024,"mn": 1,"M": "Jan","S": "CATERING","V": 4301},{"Y": 2025,"mn": 5,"M": "May","S": "CATERING","V": 8810},{"Y": 2025,"mn": 6,"M": "Jun","S": "CATERING","V": 5776},{"Y": 2025,"mn": 8,"M": "Aug","S": "CATERING","V": 4855},{"Y": 2025,"mn": 12,"M": "Dec","S": "CATERING","V": 3858},{"Y": 2023,"mn": 1,"M": "Jan","S": "FLIGHT CREW","V": 40454},{"Y": 2023,"mn": 2,"M": "Feb","S": "FLIGHT CREW","V": 55572},{"Y": 2023,"mn": 3,"M": "Mar","S": "FLIGHT CREW","V": 34445},{"Y": 2023,"mn": 4,"M": "Apr","S": "FLIGHT CREW","V": 35266},{"Y": 2023,"mn": 5,"M": "May","S": "FLIGHT CREW","V": 54400},{"Y": 2023,"mn": 6,"M": "Jun","S": "FLIGHT CREW","V": 51296},{"Y": 2023,"mn": 7,"M": "Jul","S": "FLIGHT CREW","V": 46440},{"Y": 2023,"mn": 8,"M": "Aug","S": "FLIGHT CREW","V": 34949},{"Y": 2023,"mn": 9,"M": "Sep","S": "FLIGHT CREW","V": 49749},{"Y": 2023,"mn": 10,"M": "Oct","S": "FLIGHT CREW","V": 42064},{"Y": 2023,"mn": 11,"M": "Nov","S": "FLIGHT CREW","V": 80658},{"Y": 2023,"mn": 12,"M": "Dec","S": "FLIGHT CREW","V": 42803},{"Y": 2024,"mn": 1,"M": "Jan","S": "FLIGHT CREW","V": 43181},{"Y": 2024,"mn": 2,"M": "Feb","S": "FLIGHT CREW","V": 42635},{"Y": 2024,"mn": 3,"M": "Mar","S": "FLIGHT CREW","V": 43765},{"Y": 2024,"mn": 4,"M": "Apr","S": "FLIGHT CREW","V": 43626},{"Y": 2024,"mn": 5,"M": "May","S": "FLIGHT CREW","V": 46185},{"Y": 2024,"mn": 6,"M": "Jun","S": "FLIGHT CREW","V": 40556},{"Y": 2024,"mn": 7,"M": "Jul","S": "FLIGHT CREW","V": 43291},{"Y": 2024,"mn": 8,"M": "Aug","S": "FLIGHT CREW","V": 40330},{"Y": 2024,"mn": 10,"M": "Oct","S": "FLIGHT CREW","V": 45776},{"Y": 2024,"mn": 12,"M": "Dec","S": "FLIGHT CREW","V": 47680},{"Y": 2024,"mn": 9,"M": "Sep","S": "FLIGHT CREW","V": 44931},{"Y": 2024,"mn": 11,"M": "Nov","S": "FLIGHT CREW","V": 50820},{"Y": 2025,"mn": 1,"M": "Jan","S": "FLIGHT CREW","V": 46536},{"Y": 2025,"mn": 2,"M": "Feb","S": "FLIGHT CREW","V": 47110},{"Y": 2025,"mn": 3,"M": "Mar","S": "FLIGHT CREW","V": 55832},{"Y": 2025,"mn": 4,"M": "Apr","S": "FLIGHT CREW","V": 44107},{"Y": 2025,"mn": 5,"M": "May","S": "FLIGHT CREW","V": 43868},{"Y": 2025,"mn": 6,"M": "Jun","S": "FLIGHT CREW","V": 43294},{"Y": 2025,"mn": 7,"M": "Jul","S": "FLIGHT CREW","V": 45277},{"Y": 2025,"mn": 8,"M": "Aug","S": "FLIGHT CREW","V": 45907},{"Y": 2025,"mn": 9,"M": "Sep","S": "FLIGHT CREW","V": 46571},{"Y": 2025,"mn": 10,"M": "Oct","S": "FLIGHT CREW","V": 46177},{"Y": 2025,"mn": 11,"M": "Nov","S": "FLIGHT CREW","V": 45153},{"Y": 2025,"mn": 12,"M": "Dec","S": "FLIGHT CREW","V": 43774},{"Y": 2026,"mn": 1,"M": "Jan","S": "FLIGHT CREW","V": 44853},{"Y": 2023,"mn": 7,"M": "Jul","S": "FLIGHT PERMITS","V": 6118},{"Y": 2023,"mn": 5,"M": "May","S": "Flight tickets","V": 10026},{"Y": 2023,"mn": 1,"M": "Jan","S": "FUEL","V": 117524},{"Y": 2023,"mn": 2,"M": "Feb","S": "FUEL","V": 65393},{"Y": 2023,"mn": 3,"M": "Mar","S": "FUEL","V": 56068},{"Y": 2023,"mn": 4,"M": "Apr","S": "FUEL","V": 51102},{"Y": 2023,"mn": 5,"M": "May","S": "FUEL","V": 71576},{"Y": 2023,"mn": 6,"M": "Jun","S": "FUEL","V": 146291},{"Y": 2023,"mn": 7,"M": "Jul","S": "FUEL","V": 69481},{"Y": 2023,"mn": 8,"M": "Aug","S": "FUEL","V": 51945},{"Y": 2023,"mn": 9,"M": "Sep","S": "FUEL","V": 77383},{"Y": 2023,"mn": 10,"M": "Oct","S": "FUEL","V": 20181},{"Y": 2023,"mn": 12,"M": "Dec","S": "FUEL","V": 85889},{"Y": 2024,"mn": 1,"M": "Jan","S": "FUEL","V": 38361},{"Y": 2024,"mn": 2,"M": "Feb","S": "FUEL","V": 82230},{"Y": 2024,"mn": 3,"M": "Mar","S": "FUEL","V": 151509},{"Y": 2024,"mn": 4,"M": "Apr","S": "FUEL","V": 66899},{"Y": 2024,"mn": 5,"M": "May","S": "FUEL","V": 97881},{"Y": 2024,"mn": 6,"M": "Jun","S": "FUEL","V": 56998},{"Y": 2024,"mn": 7,"M": "Jul","S": "FUEL","V": 162022},{"Y": 2024,"mn": 8,"M": "Aug","S": "FUEL","V": 91794},{"Y": 2024,"mn": 10,"M": "Oct","S": "FUEL","V": 51200},{"Y": 2024,"mn": 12,"M": "Dec","S": "FUEL","V": 34415},{"Y": 2024,"mn": 9,"M": "Sep","S": "FUEL","V": 57921},{"Y": 2024,"mn": 11,"M": "Nov","S": "FUEL","V": 103485},{"Y": 2025,"mn": 1,"M": "Jan","S": "FUEL","V": 143162},{"Y": 2025,"mn": 2,"M": "Feb","S": "FUEL","V": 53225},{"Y": 2025,"mn": 3,"M": "Mar","S": "FUEL","V": 110843},{"Y": 2025,"mn": 4,"M": "Apr","S": "FUEL","V": 16045},{"Y": 2025,"mn": 5,"M": "May","S": "FUEL","V": 82987},{"Y": 2025,"mn": 6,"M": "Jun","S": "FUEL","V": 212158},{"Y": 2025,"mn": 7,"M": "Jul","S": "FUEL","V": 31322},{"Y": 2025,"mn": 8,"M": "Aug","S": "FUEL","V": 126930},{"Y": 2025,"mn": 9,"M": "Sep","S": "FUEL","V": 111032},{"Y": 2025,"mn": 10,"M": "Oct","S": "FUEL","V": 10739},{"Y": 2025,"mn": 11,"M": "Nov","S": "FUEL","V": 150405},{"Y": 2025,"mn": 12,"M": "Dec","S": "FUEL","V": 105280},{"Y": 2026,"mn": 1,"M": "Jan","S": "FUEL","V": 84172},{"Y": 2023,"mn": 1,"M": "Jan","S": "HANDLING FEE","V": 21702},{"Y": 2023,"mn": 2,"M": "Feb","S": "HANDLING FEE","V": 12217},{"Y": 2023,"mn": 3,"M": "Mar","S": "HANDLING FEE","V": 23700},{"Y": 2023,"mn": 4,"M": "Apr","S": "HANDLING FEE","V": 58809},{"Y": 2023,"mn": 6,"M": "Jun","S": "HANDLING FEE","V": 76859},{"Y": 2023,"mn": 7,"M": "Jul","S": "HANDLING FEE","V": 39652},{"Y": 2023,"mn": 8,"M": "Aug","S": "HANDLING FEE","V": 40128},{"Y": 2023,"mn": 9,"M": "Sep","S": "HANDLING FEE","V": 58284},{"Y": 2023,"mn": 10,"M": "Oct","S": "HANDLING FEE","V": 5038},{"Y": 2023,"mn": 11,"M": "Nov","S": "HANDLING FEE","V": 479},{"Y": 2023,"mn": 12,"M": "Dec","S": "HANDLING FEE","V": 44667},{"Y": 2024,"mn": 1,"M": "Jan","S": "HANDLING FEE","V": 97544},{"Y": 2024,"mn": 2,"M": "Feb","S": "HANDLING FEE","V": 63619},{"Y": 2024,"mn": 3,"M": "Mar","S": "HANDLING FEE","V": 49098},{"Y": 2024,"mn": 4,"M": "Apr","S": "HANDLING FEE","V": 91165},{"Y": 2024,"mn": 5,"M": "May","S": "HANDLING FEE","V": 114422},{"Y": 2024,"mn": 6,"M": "Jun","S": "HANDLING FEE","V": 95491},{"Y": 2024,"mn": 7,"M": "Jul","S": "HANDLING FEE","V": 103823},{"Y": 2024,"mn": 8,"M": "Aug","S": "HANDLING FEE","V": 17084},{"Y": 2024,"mn": 10,"M": "Oct","S": "HANDLING FEE","V": 20520},{"Y": 2024,"mn": 12,"M": "Dec","S": "HANDLING FEE","V": 15009},{"Y": 2024,"mn": 9,"M": "Sep","S": "HANDLING FEE","V": 87394},{"Y": 2024,"mn": 11,"M": "Nov","S": "HANDLING FEE","V": 41516},{"Y": 2025,"mn": 1,"M": "Jan","S": "HANDLING FEE","V": 114685},{"Y": 2025,"mn": 2,"M": "Feb","S": "HANDLING FEE","V": 37361},{"Y": 2025,"mn": 3,"M": "Mar","S": "HANDLING FEE","V": 85896},{"Y": 2025,"mn": 4,"M": "Apr","S": "HANDLING FEE","V": 31408},{"Y": 2025,"mn": 5,"M": "May","S": "HANDLING FEE","V": 36967},{"Y": 2025,"mn": 6,"M": "Jun","S": "HANDLING FEE","V": 25652},{"Y": 2025,"mn": 7,"M": "Jul","S": "HANDLING FEE","V": 48177},{"Y": 2025,"mn": 8,"M": "Aug","S": "HANDLING FEE","V": 37217},{"Y": 2025,"mn": 9,"M": "Sep","S": "HANDLING FEE","V": 53641},{"Y": 2025,"mn": 10,"M": "Oct","S": "HANDLING FEE","V": 33040},{"Y": 2025,"mn": 11,"M": "Nov","S": "HANDLING FEE","V": 54204},{"Y": 2025,"mn": 12,"M": "Dec","S": "HANDLING FEE","V": 58477},{"Y": 2026,"mn": 1,"M": "Jan","S": "HANDLING FEE","V": 32193},{"Y": 2023,"mn": 4,"M": "Apr","S": "INSURANCE","V": 72236},{"Y": 2024,"mn": 3,"M": "Mar","S": "INSURANCE","V": 76127},{"Y": 2025,"mn": 4,"M": "Apr","S": "INSURANCE","V": 74947},{"Y": 2023,"mn": 1,"M": "Jan","S": "Legal Fees","V": 4358},{"Y": 2023,"mn": 3,"M": "Mar","S": "Legal Fees","V": 2566},{"Y": 2025,"mn": 4,"M": "Apr","S": "Legal Fees","V": 3085},{"Y": 2023,"mn": 1,"M": "Jan","S": "MAINTENANCE","V": 96413},{"Y": 2023,"mn": 2,"M": "Feb","S": "MAINTENANCE","V": 92774},{"Y": 2023,"mn": 3,"M": "Mar","S": "MAINTENANCE","V": 351198},{"Y": 2023,"mn": 4,"M": "Apr","S": "MAINTENANCE","V": 106718},{"Y": 2023,"mn": 5,"M": "May","S": "MAINTENANCE","V": 373830},{"Y": 2023,"mn": 6,"M": "Jun","S": "MAINTENANCE","V": 97219},{"Y": 2023,"mn": 7,"M": "Jul","S": "MAINTENANCE","V": 110513},{"Y": 2023,"mn": 8,"M": "Aug","S": "MAINTENANCE","V": 140444},{"Y": 2023,"mn": 9,"M": "Sep","S": "MAINTENANCE","V": 100446},{"Y": 2023,"mn": 10,"M": "Oct","S": "MAINTENANCE","V": 109084},{"Y": 2023,"mn": 11,"M": "Nov","S": "MAINTENANCE","V": 122762},{"Y": 2023,"mn": 12,"M": "Dec","S": "MAINTENANCE","V": 89152},{"Y": 2024,"mn": 1,"M": "Jan","S": "MAINTENANCE","V": 119319},{"Y": 2024,"mn": 2,"M": "Feb","S": "MAINTENANCE","V": 152519},{"Y": 2024,"mn": 3,"M": "Mar","S": "MAINTENANCE","V": 109936},{"Y": 2024,"mn": 4,"M": "Apr","S": "MAINTENANCE","V": 160818},{"Y": 2024,"mn": 5,"M": "May","S": "MAINTENANCE","V": 133930},{"Y": 2024,"mn": 6,"M": "Jun","S": "MAINTENANCE","V": 115966},{"Y": 2024,"mn": 7,"M": "Jul","S": "MAINTENANCE","V": 86807},{"Y": 2024,"mn": 8,"M": "Aug","S": "MAINTENANCE","V": 99699},{"Y": 2024,"mn": 10,"M": "Oct","S": "MAINTENANCE","V": 103186},{"Y": 2024,"mn": 12,"M": "Dec","S": "MAINTENANCE","V": 104408},{"Y": 2024,"mn": 9,"M": "Sep","S": "MAINTENANCE","V": 108181},{"Y": 2024,"mn": 11,"M": "Nov","S": "MAINTENANCE","V": 109791},{"Y": 2025,"mn": 1,"M": "Jan","S": "MAINTENANCE","V": 102764},{"Y": 2025,"mn": 2,"M": "Feb","S": "MAINTENANCE","V": 138921},{"Y": 2025,"mn": 3,"M": "Mar","S": "MAINTENANCE","V": 144649},{"Y": 2025,"mn": 4,"M": "Apr","S": "MAINTENANCE","V": 20836},{"Y": 2025,"mn": 5,"M": "May","S": "MAINTENANCE","V": 79343},{"Y": 2025,"mn": 6,"M": "Jun","S": "MAINTENANCE","V": 56490},{"Y": 2025,"mn": 7,"M": "Jul","S": "MAINTENANCE","V": 26493},{"Y": 2025,"mn": 8,"M": "Aug","S": "MAINTENANCE","V": 19616},{"Y": 2025,"mn": 9,"M": "Sep","S": "MAINTENANCE","V": 22864},{"Y": 2025,"mn": 10,"M": "Oct","S": "MAINTENANCE","V": 10294},{"Y": 2025,"mn": 12,"M": "Dec","S": "MAINTENANCE","V": 71447},{"Y": 2026,"mn": 1,"M": "Jan","S": "MAINTENANCE","V": 69386},{"Y": 2023,"mn": 1,"M": "Jan","S": "MANAGEMENT","V": 16934},{"Y": 2023,"mn": 2,"M": "Feb","S": "MANAGEMENT","V": 17101},{"Y": 2023,"mn": 3,"M": "Mar","S": "MANAGEMENT","V": 13994},{"Y": 2023,"mn": 4,"M": "Apr","S": "MANAGEMENT","V": 16693},{"Y": 2023,"mn": 5,"M": "May","S": "MANAGEMENT","V": 16568},{"Y": 2023,"mn": 6,"M": "Jun","S": "MANAGEMENT","V": 16607},{"Y": 2023,"mn": 7,"M": "Jul","S": "MANAGEMENT","V": 16476},{"Y": 2023,"mn": 8,"M": "Aug","S": "MANAGEMENT","V": 16997},{"Y": 2023,"mn": 9,"M": "Sep","S": "MANAGEMENT","V": 17147},{"Y": 2023,"mn": 10,"M": "Oct","S": "MANAGEMENT","V": 14340},{"Y": 2023,"mn": 11,"M": "Nov","S": "MANAGEMENT","V": 14007},{"Y": 2023,"mn": 12,"M": "Dec","S": "MANAGEMENT","V": 14067},{"Y": 2024,"mn": 1,"M": "Jan","S": "MANAGEMENT","V": 14213},{"Y": 2024,"mn": 2,"M": "Feb","S": "MANAGEMENT","V": 14012},{"Y": 2024,"mn": 3,"M": "Mar","S": "MANAGEMENT","V": 14370},{"Y": 2024,"mn": 4,"M": "Apr","S": "MANAGEMENT","V": 14325},{"Y": 2024,"mn": 5,"M": "May","S": "MANAGEMENT","V": 14555},{"Y": 2024,"mn": 6,"M": "Jun","S": "MANAGEMENT","V": 16281},{"Y": 2024,"mn": 7,"M": "Jul","S": "MANAGEMENT","V": 18012},{"Y": 2024,"mn": 8,"M": "Aug","S": "MANAGEMENT","V": 17989},{"Y": 2024,"mn": 10,"M": "Oct","S": "MANAGEMENT","V": 18905},{"Y": 2024,"mn": 12,"M": "Dec","S": "MANAGEMENT","V": 15000},{"Y": 2024,"mn": 9,"M": "Sep","S": "MANAGEMENT","V": 17905},{"Y": 2024,"mn": 11,"M": "Nov","S": "MANAGEMENT","V": 22655},{"Y": 2025,"mn": 1,"M": "Jan","S": "MANAGEMENT","V": 15000},{"Y": 2025,"mn": 2,"M": "Feb","S": "MANAGEMENT","V": 14820},{"Y": 2025,"mn": 3,"M": "Mar","S": "MANAGEMENT","V": 14370},{"Y": 2025,"mn": 4,"M": "Apr","S": "MANAGEMENT","V": 13875},{"Y": 2025,"mn": 5,"M": "May","S": "MANAGEMENT","V": 13800},{"Y": 2025,"mn": 6,"M": "Jun","S": "MANAGEMENT","V": 13620},{"Y": 2025,"mn": 7,"M": "Jul","S": "MANAGEMENT","V": 13575},{"Y": 2025,"mn": 8,"M": "Aug","S": "MANAGEMENT","V": 13395},{"Y": 2025,"mn": 9,"M": "Sep","S": "MANAGEMENT","V": 13365},{"Y": 2025,"mn": 10,"M": "Oct","S": "MANAGEMENT","V": 13500},{"Y": 2025,"mn": 11,"M": "Nov","S": "MANAGEMENT","V": 13485},{"Y": 2025,"mn": 12,"M": "Dec","S": "MANAGEMENT","V": 13350},{"Y": 2026,"mn": 1,"M": "Jan","S": "MANAGEMENT","V": 13395},{"Y": 2023,"mn": 6,"M": "Jun","S": "NAVDATA","V": 10255},{"Y": 2024,"mn": 5,"M": "May","S": "NAVDATA","V": 39774},{"Y": 2025,"mn": 2,"M": "Feb","S": "NAVDATA","V": 71065},{"Y": 2023,"mn": 1,"M": "Jan","S": "OPERATIONS","V": 40312},{"Y": 2023,"mn": 2,"M": "Feb","S": "OPERATIONS","V": 39897},{"Y": 2023,"mn": 3,"M": "Mar","S": "OPERATIONS","V": 34330},{"Y": 2023,"mn": 4,"M": "Apr","S": "OPERATIONS","V": 1304},{"Y": 2023,"mn": 5,"M": "May","S": "OPERATIONS","V": 15488},{"Y": 2023,"mn": 6,"M": "Jun","S": "OPERATIONS","V": 1030},{"Y": 2023,"mn": 7,"M": "Jul","S": "OPERATIONS","V": 55318},{"Y": 2023,"mn": 8,"M": "Aug","S": "OPERATIONS","V": 9453},{"Y": 2023,"mn": 9,"M": "Sep","S": "OPERATIONS","V": 56134},{"Y": 2023,"mn": 11,"M": "Nov","S": "OPERATIONS","V": 33},{"Y": 2024,"mn": 1,"M": "Jan","S": "OPERATIONS","V": 4049},{"Y": 2024,"mn": 2,"M": "Feb","S": "OPERATIONS","V": 3794},{"Y": 2024,"mn": 3,"M": "Mar","S": "OPERATIONS","V": 12100},{"Y": 2024,"mn": 4,"M": "Apr","S": "OPERATIONS","V": 15987},{"Y": 2024,"mn": 5,"M": "May","S": "OPERATIONS","V": 5640},{"Y": 2024,"mn": 6,"M": "Jun","S": "OPERATIONS","V": 9282},{"Y": 2024,"mn": 7,"M": "Jul","S": "OPERATIONS","V": 17998},{"Y": 2024,"mn": 12,"M": "Dec","S": "OPERATIONS","V": 21525},{"Y": 2025,"mn": 7,"M": "Jul","S": "OPERATIONS","V": 9503},{"Y": 2025,"mn": 10,"M": "Oct","S": "OPERATIONS","V": 2700},{"Y": 2025,"mn": 11,"M": "Nov","S": "OPERATIONS","V": 34},{"Y": 2025,"mn": 12,"M": "Dec","S": "OPERATIONS","V": 15836},{"Y": 2023,"mn": 1,"M": "Jan","S": "PARKING AND HANGAR","V": 42793},{"Y": 2023,"mn": 2,"M": "Feb","S": "PARKING AND HANGAR","V": 11080},{"Y": 2023,"mn": 5,"M": "May","S": "PARKING AND HANGAR","V": 5601},{"Y": 2023,"mn": 6,"M": "Jun","S": "PARKING AND HANGAR","V": 5614},{"Y": 2023,"mn": 7,"M": "Jul","S": "PARKING AND HANGAR","V": 5570},{"Y": 2023,"mn": 1,"M": "Jan","S": "ROUTE CHARGES","V": 703},{"Y": 2023,"mn": 2,"M": "Feb","S": "ROUTE CHARGES","V": 3036},{"Y": 2023,"mn": 3,"M": "Mar","S": "ROUTE CHARGES","V": 4150},{"Y": 2023,"mn": 4,"M": "Apr","S": "ROUTE CHARGES","V": 347},{"Y": 2023,"mn": 5,"M": "May","S": "ROUTE CHARGES","V": 8069},{"Y": 2023,"mn": 6,"M": "Jun","S": "ROUTE CHARGES","V": 4316},{"Y": 2023,"mn": 7,"M": "Jul","S": "ROUTE CHARGES","V": 2822},{"Y": 2023,"mn": 8,"M": "Aug","S": "ROUTE CHARGES","V": 12244},{"Y": 2023,"mn": 9,"M": "Sep","S": "ROUTE CHARGES","V": 10913},{"Y": 2023,"mn": 10,"M": "Oct","S": "ROUTE CHARGES","V": 2431},{"Y": 2023,"mn": 11,"M": "Nov","S": "ROUTE CHARGES","V": 2698},{"Y": 2023,"mn": 12,"M": "Dec","S": "ROUTE CHARGES","V": 1178},{"Y": 2024,"mn": 1,"M": "Jan","S": "ROUTE CHARGES","V": 620},{"Y": 2024,"mn": 3,"M": "Mar","S": "ROUTE CHARGES","V": 21289},{"Y": 2024,"mn": 4,"M": "Apr","S": "ROUTE CHARGES","V": 6923},{"Y": 2024,"mn": 5,"M": "May","S": "ROUTE CHARGES","V": 4506},{"Y": 2024,"mn": 6,"M": "Jun","S": "ROUTE CHARGES","V": 6944},{"Y": 2024,"mn": 7,"M": "Jul","S": "ROUTE CHARGES","V": 25999},{"Y": 2024,"mn": 8,"M": "Aug","S": "ROUTE CHARGES","V": 10054},{"Y": 2024,"mn": 10,"M": "Oct","S": "ROUTE CHARGES","V": 9945},{"Y": 2024,"mn": 12,"M": "Dec","S": "ROUTE CHARGES","V": 9315},{"Y": 2024,"mn": 9,"M": "Sep","S": "ROUTE CHARGES","V": 10890},{"Y": 2024,"mn": 11,"M": "Nov","S": "ROUTE CHARGES","V": 835},{"Y": 2025,"mn": 1,"M": "Jan","S": "ROUTE CHARGES","V": 19306},{"Y": 2025,"mn": 2,"M": "Feb","S": "ROUTE CHARGES","V": 23322},{"Y": 2025,"mn": 3,"M": "Mar","S": "ROUTE CHARGES","V": 21395},{"Y": 2025,"mn": 4,"M": "Apr","S": "ROUTE CHARGES","V": 8317},{"Y": 2025,"mn": 5,"M": "May","S": "ROUTE CHARGES","V": 9964},{"Y": 2025,"mn": 6,"M": "Jun","S": "ROUTE CHARGES","V": 16690},{"Y": 2025,"mn": 7,"M": "Jul","S": "ROUTE CHARGES","V": 16789},{"Y": 2025,"mn": 8,"M": "Aug","S": "ROUTE CHARGES","V": 14690},{"Y": 2025,"mn": 9,"M": "Sep","S": "ROUTE CHARGES","V": 5564},{"Y": 2025,"mn": 10,"M": "Oct","S": "ROUTE CHARGES","V": 19139},{"Y": 2025,"mn": 11,"M": "Nov","S": "ROUTE CHARGES","V": 11625},{"Y": 2025,"mn": 12,"M": "Dec","S": "ROUTE CHARGES","V": 13354},{"Y": 2026,"mn": 1,"M": "Jan","S": "ROUTE CHARGES","V": 11603},{"Y": 2023,"mn": 6,"M": "Jun","S": "SALES","V": 27106},{"Y": 2024,"mn": 4,"M": "Apr","S": "SALES","V": 139969},{"Y": 2024,"mn": 6,"M": "Jun","S": "SALES","V": 62183},{"Y": 2024,"mn": 7,"M": "Jul","S": "SALES","V": 28914},{"Y": 2025,"mn": 4,"M": "Apr","S": "SALES","V": 6287},{"Y": 2025,"mn": 5,"M": "May","S": "SALES","V": 80500},{"Y": 2023,"mn": 5,"M": "May","S": "TRAINING","V": 2018},{"Y": 2023,"mn": 10,"M": "Oct","S": "TRAINING","V": 42347},{"Y": 2024,"mn": 8,"M": "Aug","S": "TRAINING","V": 165796},{"Y": 2024,"mn": 10,"M": "Oct","S": "TRAINING","V": 1546},{"Y": 2024,"mn": 12,"M": "Dec","S": "TRAINING","V": 4761},{"Y": 2025,"mn": 1,"M": "Jan","S": "TRAINING","V": 4740},{"Y": 2025,"mn": 3,"M": "Mar","S": "TRAINING","V": 566},{"Y": 2025,"mn": 4,"M": "Apr","S": "TRAINING","V": 1952},{"Y": 2025,"mn": 8,"M": "Aug","S": "TRAINING","V": 1188},{"Y": 2025,"mn": 9,"M": "Sep","S": "TRAINING","V": 87716},{"Y": 2025,"mn": 10,"M": "Oct","S": "TRAINING","V": 86493},{"Y": 2025,"mn": 11,"M": "Nov","S": "TRAINING","V": 43025},{"Y": 2023,"mn": 1,"M": "Jan","S": "TRAVEL EXPENSES","V": 19840},{"Y": 2023,"mn": 2,"M": "Feb","S": "TRAVEL EXPENSES","V": 42187},{"Y": 2023,"mn": 3,"M": "Mar","S": "TRAVEL EXPENSES","V": 26325},{"Y": 2023,"mn": 4,"M": "Apr","S": "TRAVEL EXPENSES","V": 23261},{"Y": 2023,"mn": 5,"M": "May","S": "TRAVEL EXPENSES","V": 20741},{"Y": 2023,"mn": 6,"M": "Jun","S": "TRAVEL EXPENSES","V": 42074},{"Y": 2023,"mn": 7,"M": "Jul","S": "TRAVEL EXPENSES","V": 35884},{"Y": 2023,"mn": 8,"M": "Aug","S": "TRAVEL EXPENSES","V": 58880},{"Y": 2023,"mn": 9,"M": "Sep","S": "TRAVEL EXPENSES","V": 24070},{"Y": 2023,"mn": 10,"M": "Oct","S": "TRAVEL EXPENSES","V": 22578},{"Y": 2023,"mn": 11,"M": "Nov","S": "TRAVEL EXPENSES","V": 15871},{"Y": 2023,"mn": 12,"M": "Dec","S": "TRAVEL EXPENSES","V": 39353},{"Y": 2024,"mn": 1,"M": "Jan","S": "TRAVEL EXPENSES","V": 22223},{"Y": 2024,"mn": 2,"M": "Feb","S": "TRAVEL EXPENSES","V": 26543},{"Y": 2024,"mn": 3,"M": "Mar","S": "TRAVEL EXPENSES","V": 24195},{"Y": 2024,"mn": 4,"M": "Apr","S": "TRAVEL EXPENSES","V": 39807},{"Y": 2024,"mn": 5,"M": "May","S": "TRAVEL EXPENSES","V": 20110},{"Y": 2024,"mn": 6,"M": "Jun","S": "TRAVEL EXPENSES","V": 36014},{"Y": 2024,"mn": 7,"M": "Jul","S": "TRAVEL EXPENSES","V": 49659},{"Y": 2024,"mn": 8,"M": "Aug","S": "TRAVEL EXPENSES","V": 47458},{"Y": 2024,"mn": 10,"M": "Oct","S": "TRAVEL EXPENSES","V": 46039},{"Y": 2024,"mn": 12,"M": "Dec","S": "TRAVEL EXPENSES","V": 40421},{"Y": 2024,"mn": 9,"M": "Sep","S": "TRAVEL EXPENSES","V": 48554},{"Y": 2024,"mn": 11,"M": "Nov","S": "TRAVEL EXPENSES","V": 41278},{"Y": 2025,"mn": 1,"M": "Jan","S": "TRAVEL EXPENSES","V": 28302},{"Y": 2025,"mn": 2,"M": "Feb","S": "TRAVEL EXPENSES","V": 44873},{"Y": 2025,"mn": 3,"M": "Mar","S": "TRAVEL EXPENSES","V": 29401},{"Y": 2025,"mn": 4,"M": "Apr","S": "TRAVEL EXPENSES","V": 20172},{"Y": 2025,"mn": 5,"M": "May","S": "TRAVEL EXPENSES","V": 35747},{"Y": 2025,"mn": 6,"M": "Jun","S": "TRAVEL EXPENSES","V": 40258},{"Y": 2025,"mn": 7,"M": "Jul","S": "TRAVEL EXPENSES","V": 46797},{"Y": 2025,"mn": 8,"M": "Aug","S": "TRAVEL EXPENSES","V": 34711},{"Y": 2025,"mn": 9,"M": "Sep","S": "TRAVEL EXPENSES","V": 44649},{"Y": 2025,"mn": 10,"M": "Oct","S": "TRAVEL EXPENSES","V": 33239},{"Y": 2025,"mn": 11,"M": "Nov","S": "TRAVEL EXPENSES","V": 29828},{"Y": 2025,"mn": 12,"M": "Dec","S": "TRAVEL EXPENSES","V": 28604},{"Y": 2026,"mn": 1,"M": "Jan","S": "TRAVEL EXPENSES","V": 54409},{"Y": 2023,"mn": 8,"M": "Aug","S": "CABIN PROVISIONS","V": 1083},{"Y": 2023,"mn": 12,"M": "Dec","S": "CABIN PROVISIONS","V": 138},{"Y": 2024,"mn": 2,"M": "Feb","S": "CABIN PROVISIONS","V": 102},{"Y": 2024,"mn": 3,"M": "Mar","S": "CABIN PROVISIONS","V": 30379},{"Y": 2024,"mn": 4,"M": "Apr","S": "CABIN PROVISIONS","V": 2079},{"Y": 2024,"mn": 5,"M": "May","S": "CABIN PROVISIONS","V": 4789},{"Y": 2024,"mn": 6,"M": "Jun","S": "CABIN PROVISIONS","V": 508},{"Y": 2024,"mn": 8,"M": "Aug","S": "CABIN PROVISIONS","V": 1021},{"Y": 2024,"mn": 10,"M": "Oct","S": "CABIN PROVISIONS","V": 3674},{"Y": 2024,"mn": 12,"M": "Dec","S": "CABIN PROVISIONS","V": 2812},{"Y": 2024,"mn": 9,"M": "Sep","S": "CABIN PROVISIONS","V": 17922},{"Y": 2024,"mn": 11,"M": "Nov","S": "CABIN PROVISIONS","V": 5604},{"Y": 2025,"mn": 1,"M": "Jan","S": "CABIN PROVISIONS","V": 4433},{"Y": 2025,"mn": 2,"M": "Feb","S": "CABIN PROVISIONS","V": 1151},{"Y": 2025,"mn": 3,"M": "Mar","S": "CABIN PROVISIONS","V": 1026},{"Y": 2025,"mn": 4,"M": "Apr","S": "CABIN PROVISIONS","V": 255},{"Y": 2025,"mn": 5,"M": "May","S": "CABIN PROVISIONS","V": 2481},{"Y": 2025,"mn": 6,"M": "Jun","S": "CABIN PROVISIONS","V": 1312},{"Y": 2025,"mn": 7,"M": "Jul","S": "CABIN PROVISIONS","V": 1446},{"Y": 2025,"mn": 8,"M": "Aug","S": "CABIN PROVISIONS","V": 3729},{"Y": 2025,"mn": 12,"M": "Dec","S": "CABIN PROVISIONS","V": 4200},{"Y": 2026,"mn": 1,"M": "Jan","S": "CABIN PROVISIONS","V": 940},{"Y": 2024,"mn": 1,"M": "Jan","S": "REFUND","V": -2681},{"Y": 2024,"mn": 5,"M": "May","S": "REFUND","V": -10176},{"Y": 2024,"mn": 7,"M": "Jul","S": "REFUND","V": -4740},{"Y": 2025,"mn": 1,"M": "Jan","S": "REFUND","V": -21500},{"Y": 2025,"mn": 4,"M": "Apr","S": "REFUND","V": -119},{"Y": 2025,"mn": 9,"M": "Sep","S": "REFUND","V": -26788},{"Y": 2025,"mn": 10,"M": "Oct","S": "REFUND","V": -10293},{"Y": 2025,"mn": 4,"M": "Apr","S": "CAMO","V": 15406},{"Y": 2025,"mn": 5,"M": "May","S": "CAMO","V": 3680},{"Y": 2025,"mn": 6,"M": "Jun","S": "CAMO","V": 3632},{"Y": 2025,"mn": 7,"M": "Jul","S": "CAMO","V": 3620},{"Y": 2025,"mn": 8,"M": "Aug","S": "CAMO","V": 3572},{"Y": 2025,"mn": 9,"M": "Sep","S": "CAMO","V": 3564},{"Y": 2025,"mn": 10,"M": "Oct","S": "CAMO","V": 3600},{"Y": 2025,"mn": 11,"M": "Nov","S": "CAMO","V": 3596},{"Y": 2025,"mn": 12,"M": "Dec","S": "CAMO","V": 3560},{"Y": 2026,"mn": 1,"M": "Jan","S": "CAMO","V": 3572},{"Y": 2025,"mn": 4,"M": "Apr","S": "DATALINK","V": 12851},{"Y": 2025,"mn": 5,"M": "May","S": "DATALINK","V": 12782},{"Y": 2025,"mn": 6,"M": "Jun","S": "DATALINK","V": 9080},{"Y": 2025,"mn": 7,"M": "Jul","S": "DATALINK","V": 12830},{"Y": 2025,"mn": 8,"M": "Aug","S": "DATALINK","V": 17860},{"Y": 2025,"mn": 9,"M": "Sep","S": "DATALINK","V": 10414},{"Y": 2025,"mn": 10,"M": "Oct","S": "DATALINK","V": 12762},{"Y": 2025,"mn": 11,"M": "Nov","S": "DATALINK","V": 8990},{"Y": 2025,"mn": 12,"M": "Dec","S": "DATALINK","V": 8900},{"Y": 2026,"mn": 1,"M": "Jan","S": "DATALINK","V": 8930},{"Y": 2025,"mn": 4,"M": "Apr","S": "Engine Plan","V": 48225},{"Y": 2025,"mn": 5,"M": "May","S": "Engine Plan","V": 47964},{"Y": 2025,"mn": 6,"M": "Jun","S": "Engine Plan","V": 47339},{"Y": 2025,"mn": 7,"M": "Jul","S": "Engine Plan","V": 47182},{"Y": 2025,"mn": 8,"M": "Aug","S": "Engine Plan","V": 46557},{"Y": 2025,"mn": 9,"M": "Sep","S": "Engine Plan","V": 46453},{"Y": 2025,"mn": 10,"M": "Oct","S": "Engine Plan","V": 46922},{"Y": 2025,"mn": 11,"M": "Nov","S": "Engine Plan","V": 46870},{"Y": 2025,"mn": 12,"M": "Dec","S": "Engine Plan","V": 53263},{"Y": 2026,"mn": 1,"M": "Jan","S": "Engine Plan","V": 53442},{"Y": 2025,"mn": 4,"M": "Apr","S": "Smart Parts","V": 27792},{"Y": 2025,"mn": 5,"M": "May","S": "Smart Parts","V": 27642},{"Y": 2025,"mn": 6,"M": "Jun","S": "Smart Parts","V": 27281},{"Y": 2025,"mn": 7,"M": "Jul","S": "Smart Parts","V": 27191},{"Y": 2025,"mn": 8,"M": "Aug","S": "Smart Parts","V": 26831},{"Y": 2025,"mn": 9,"M": "Sep","S": "Smart Parts","V": 26771},{"Y": 2025,"mn": 10,"M": "Oct","S": "Smart Parts","V": 27041},{"Y": 2025,"mn": 11,"M": "Nov","S": "Smart Parts","V": 27011},{"Y": 2025,"mn": 12,"M": "Dec","S": "Smart Parts","V": 26741},{"Y": 2026,"mn": 1,"M": "Jan","S": "Smart Parts","V": 27873},{"Y": 2025,"mn": 4,"M": "Apr","S": "APU Plan","V": 1635},{"Y": 2025,"mn": 5,"M": "May","S": "APU Plan","V": 5778},{"Y": 2025,"mn": 6,"M": "Jun","S": "APU Plan","V": 4099},{"Y": 2025,"mn": 7,"M": "Jul","S": "APU Plan","V": 4085},{"Y": 2025,"mn": 8,"M": "Aug","S": "APU Plan","V": 6836},{"Y": 2025,"mn": 9,"M": "Sep","S": "APU Plan","V": 2449},{"Y": 2025,"mn": 10,"M": "Oct","S": "APU Plan","V": 3533},{"Y": 2025,"mn": 12,"M": "Dec","S": "APU Plan","V": 4018},{"Y": 2026,"mn": 1,"M": "Jan","S": "APU Plan","V": 5340},{"Y": 2025,"mn": 5,"M": "May","S": "EFB","V": 36258}];
+
+const ALLC=["APU Plan","CABIN PROVISIONS","CAMO","CATERING","DATALINK","EFB","Engine Plan","FLIGHT CREW","FLIGHT PERMITS","FUEL","Flight tickets","HANDLING FEE","INSURANCE","Legal Fees","MAINTENANCE","MANAGEMENT","NAVDATA","OPERATIONS","PARKING AND HANGAR","REFUND","ROUTE CHARGES","SALES","Smart Parts","TRAINING","TRAVEL EXPENSES"];
+const MN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const CC={'FUEL':'#f59e0b','MAINTENANCE':'#8b5cf6','FLIGHT CREW':'#10b981','HANDLING FEE':'#0ea5e9','TRAVEL EXPENSES':'#f97316','ROUTE CHARGES':'#ec4899','MANAGEMENT':'#6366f1','OPERATIONS':'#14b8a6','INSURANCE':'#ef4444','TRAINING':'#84cc16','Engine Plan':'#a78bfa','Smart Parts':'#fb7185','NAVDATA':'#67e8f9','PARKING AND HANGAR':'#fcd34d','CATERING':'#a3e635','CAMO':'#34d399','DATALINK':'#818cf8','APU Plan':'#f472b6','CABIN PROVISIONS':'#fb923c','REFUND':'#94a3b8','SALES':'#22d3ee','Legal Fees':'#d97706','EFB':'#c084fc','FLIGHT PERMITS':'#4ade80','Flight tickets':'#38bdf8'};
+
+// ═══ STATE ═══
+let PT='ytd', CPT='year', showCmp=false;
+let ACats=new Set(['ALL']);
+let CH={t:null,d:null,b:null,kc:null};
+const TY=2026, TM=1;
+
+// Register datalabels plugin but disable globally — enable per-chart
+Chart.register(ChartDataLabels);
+Chart.defaults.plugins.datalabels={display:false};
+
+// ═══ PERIOD HELPERS ═══
+function getMonths(pt,y,m,q){
+  let o=[];
+  if(pt==='month') o=[{Y:y,mn:m}];
+  else if(pt==='quarter'){const s=(q-1)*3+1;for(let i=s;i<s+3;i++)o.push({Y:y,mn:i});}
+  else if(pt==='year'){for(let i=1;i<=12;i++)o.push({Y:y,mn:i});}
+  else if(pt==='ytd'){const e=(y===TY)?TM:12;for(let i=1;i<=e;i++)o.push({Y:y,mn:i});}
+  else if(pt==='qtd'){const qs=(q-1)*3+1;const qe=qs+2;const e=(y===TY&&q===Math.ceil(TM/3))?TM:qe;for(let i=qs;i<=Math.min(e,qe);i++)o.push({Y:y,mn:i});}
+  else if(pt==='mtd'){const m2=(y===TY)?TM:12;o=[{Y:y,mn:m2}];}
+  return o;
+}
+function getLabel(pt,y,m,q){
+  if(pt==='month')return`${MN[m-1]} ${y}`;
+  if(pt==='quarter')return`Q${q} ${y}`;
+  if(pt==='year')return`Full Year ${y}`;
+  if(pt==='ytd'){const e=(y===TY)?TM:12;return`YTD ${y} (Jan–${MN[e-1]})`;}
+  if(pt==='qtd')return`QTD Q${q} ${y}`;
+  if(pt==='mtd'){const m2=(y===TY)?TM:12;return`MTD ${MN[m2-1]} ${y}`;}
+}
+
+// ═══ SELECTORS ═══
+const gv=id=>parseInt(document.getElementById(id).value);
+const pSel=()=>({y:gv('pYear'),m:gv('pMonth'),q:gv('pQuarter')});
+const cSel=()=>({y:gv('cYear'),m:gv('cMonth'),q:gv('cQuarter')});
+
+// ═══ DATA ═══
+function cSum(months,cats){const all=cats.has('ALL');return RC.filter(r=>months.some(({Y,mn})=>r.Y===Y&&r.mn===mn)&&(all||cats.has(r.S)));}
+function fuel(months){return RC.filter(r=>r.S==='FUEL'&&months.some(({Y,mn})=>r.Y===Y&&r.mn===mn)).reduce((s,r)=>s+r.V,0);}
+function mr(Y,mn){return RM.find(r=>r.Y===Y&&r.mn===mn)||{fh:0,bh:0,T:0};}
+function kpis(months){
+  const rows=cSum(months,ACats);
+  const tot=rows.reduce((s,r)=>s+r.V,0);
+  const fu=ACats.has('ALL')?fuel(months):rows.filter(r=>r.S==='FUEL').reduce((s,r)=>s+r.V,0);
+  const fh=months.reduce((s,{Y,mn})=>s+(mr(Y,mn).fh||0),0);
+  const bh=months.reduce((s,{Y,mn})=>s+(mr(Y,mn).bh||0),0);
+  return{tot,fu,fh,bh,cph:fh>0?tot/fh:0,fph:fh>0?fu/fh:0};
+}
+
+// ═══ FORMAT ═══
+const fe=v=>{if(!v)return'—';const a=Math.abs(v);if(a>=1e6)return'€'+(v/1e6).toFixed(2)+'M';if(a>=1e3)return'€'+Math.round(v/1e3)+'K';return'€'+Math.round(v);};
+const fn=(v,d=1)=>v>0?v.toFixed(d):'—';
+const pct=(a,b)=>b?((a-b)/Math.abs(b)*100):null;
+function connArrow(p,lowerGood){
+  if(p===null)return'<span class="conn-arr arr-neu">—</span>';
+  const bad=lowerGood?(p>0):(p<0);
+  return`<span class="conn-arr ${bad?'arr-bad':'arr-good'}">${p>0?'▲':'▼'} ${Math.abs(p).toFixed(1)}%</span>`;
+}
+function dText(p,lowerGood){
+  if(p===null)return'';
+  const bad=lowerGood?(p>0):(p<0);
+  return`<span class="${bad?'delta-bad':'delta-good'}">${p>0?'▲':'▼'} ${Math.abs(p).toFixed(1)}% vs compare</span>`;
+}
+const s=id=>{const e=document.getElementById(id);return e?e:null;};
+const sv=(id,v)=>{const e=s(id);if(e)e.textContent=v;};
+const sh=(id,h)=>{const e=s(id);if(e)e.innerHTML=h;};
+
+// ═══ KPIs ═══
+function renderKPIs(pm,cm){
+  const p=kpis(pm);
+  sv('k-cph',p.cph>0?'€'+Math.round(p.cph).toLocaleString():'—');
+  sv('k-fph',p.fph>0?'€'+Math.round(p.fph).toLocaleString():'—');
+  sv('k-hrs',p.fh>0?fn(p.fh)+' hrs':'—');
+  sv('k-blk',p.bh>0?fn(p.bh)+' hrs':'—');
+  sv('k-tot',p.tot>0?fe(p.tot):'—');
+  if(showCmp&&cm.length){
+    const c=kpis(cm);
+    sv('ck-cph',c.cph>0?'€'+Math.round(c.cph).toLocaleString():'—');
+    sv('ck-fph',c.fph>0?'€'+Math.round(c.fph).toLocaleString():'—');
+    sv('ck-hrs',c.fh>0?fn(c.fh)+' hrs':'—');
+    sv('ck-blk',c.bh>0?fn(c.bh)+' hrs':'—');
+    sv('ck-tot',c.tot>0?fe(c.tot):'—');
+    const pc=pct(p.cph,c.cph),pf=pct(p.fph,c.fph),ph=pct(p.fh,c.fh),pt2=pct(p.tot,c.tot);
+    sh('cn-cph',connArrow(pc,true)); sh('cn-fph',connArrow(pf,true));
+    sh('cn-hrs',connArrow(ph,false)); sh('cn-tot',connArrow(pt2,true));
+    sh('k-cph-d',dText(pc,true)); sh('k-fph-d',dText(pf,true));
+    sh('k-hrs-d',dText(ph,false)); sh('k-tot-d',dText(pt2,true));
+  } else {
+    ['k-cph-d','k-fph-d','k-hrs-d','k-tot-d'].forEach(id=>sh(id,''));
+  }
+}
+
+// ═══ CAT BREAKDOWN ═══
+function renderCat(pm,cm){
+  const rows=cSum(pm,ACats);
+  const tot={};rows.forEach(r=>{if(r.S==='REFUND')return;tot[r.S]=(tot[r.S]||0)+r.V;});
+  const sorted=Object.entries(tot).sort((a,b)=>b[1]-a[1]);
+  const grand=sorted.reduce((s,[,v])=>s+v,0);
+  const ct={};
+  if(showCmp&&cm.length)cSum(cm,ACats).forEach(r=>{if(r.S==='REFUND')return;ct[r.S]=(ct[r.S]||0)+r.V;});
+  let html='';
+  sorted.forEach(([cat,amt])=>{
+    const pp=grand>0?amt/grand*100:0, col=CC[cat]||'#6b7280';
+    const ca=ct[cat];
+    const cHtml=showCmp&&cm.length?`<div class="cat-cmp">${ca?fe(ca):'—'}</div>`:'';
+    const dp=showCmp&&ca?pct(amt,ca):null;
+    const dHtml=dp!==null?`<div class="cat-diff" style="color:${dp>0?'var(--red)':'var(--green)'}">${dp>0?'▲':'▼'}${Math.abs(dp).toFixed(0)}%</div>`:'';
+    html+=`<div class="cat-row"><div class="cat-dot" style="background:${col}"></div><div class="cat-name">${cat}</div><div class="cat-bar-wrap"><div class="cat-bar" style="width:${pp.toFixed(1)}%;background:${col}"></div></div><div class="cat-amt">${fe(amt)}</div>${cHtml}${dHtml}<div class="cat-pct">${pp.toFixed(1)}%</div></div>`;
+  });
+  document.getElementById('catBreakdown').innerHTML=html||'<div style="color:var(--muted);padding:16px">No data</div>';
+}
+
+// ═══ TABLE ═══
+function renderTable(pm,cm){
+  const hc=showCmp&&cm.length;
+  sh('tblHead',`<tr><th>Month</th><th>Flt Hrs</th><th>Cost (€)</th><th>€/Hr</th><th>Fuel (€)</th><th>Fuel/Hr</th>${hc?'<th class="th-c">Cmp Cost</th><th class="th-c">Cmp €/Hr</th>':''}</tr>`);
+  let rows='';
+  pm.forEach(({Y,mn},i)=>{
+    const r=mr(Y,mn);
+    const cr=cSum([{Y,mn}],ACats);
+    const cost=cr.reduce((s,r)=>s+r.V,0);
+    const fu=ACats.has('ALL')?fuel([{Y,mn}]):cr.filter(r=>r.S==='FUEL').reduce((s,r)=>s+r.V,0);
+    const fh=r.fh||0;
+    const cph=fh>0?cost/fh:0, fph=fh>0?fu/fh:0;
+    let cc='';
+    if(hc){
+      const cmp=cm[i];
+      if(cmp){
+        const ccr=cSum([cmp],ACats);
+        const ccost=ccr.reduce((s,r)=>s+r.V,0);
+        const cfh=mr(cmp.Y,cmp.mn).fh||0;
+        const ccph=cfh>0?ccost/cfh:0;
+        cc=`<td class="tc">${ccost>0?Math.round(ccost).toLocaleString():'—'}</td><td class="tc">${ccph>0?Math.round(ccph).toLocaleString():'—'}</td>`;
+      } else cc='<td class="tc">—</td><td class="tc">—</td>';
+    }
+    rows+=`<tr><td>${MN[mn-1]} ${Y}</td><td>${fh>0?fn(fh):'—'}</td><td>${cost>0?Math.round(cost).toLocaleString():'—'}</td><td>${cph>0?Math.round(cph).toLocaleString():'—'}</td><td>${fu>0?Math.round(fu).toLocaleString():'—'}</td><td>${fph>0?Math.round(fph).toLocaleString():'—'}</td>${cc}</tr>`;
+  });
+  const allR=cSum(pm,ACats);
+  const tC=allR.reduce((s,r)=>s+r.V,0);
+  const tF=ACats.has('ALL')?fuel(pm):allR.filter(r=>r.S==='FUEL').reduce((s,r)=>s+r.V,0);
+  const tH=pm.reduce((s,{Y,mn})=>s+(mr(Y,mn).fh||0),0);
+  const tCph=tH>0?tC/tH:0, tFph=tH>0?tF/tH:0;
+  let tcc='';
+  if(hc){const ca=cSum(cm,ACats);const cC=ca.reduce((s,r)=>s+r.V,0);const cH=cm.reduce((s,{Y,mn})=>s+(mr(Y,mn).fh||0),0);const cCph=cH>0?cC/cH:0;tcc=`<td class="tc">${cC>0?Math.round(cC).toLocaleString():'—'}</td><td class="tc">${cCph>0?Math.round(cCph).toLocaleString():'—'}</td>`;}
+  rows+=`<tr class="tot"><td>TOTAL</td><td>${tH>0?fn(tH):'—'}</td><td>${tC>0?Math.round(tC).toLocaleString():'—'}</td><td>${tCph>0?Math.round(tCph).toLocaleString():'—'}</td><td>${tF>0?Math.round(tF).toLocaleString():'—'}</td><td>${tFph>0?Math.round(tFph).toLocaleString():'—'}</td>${tcc}</tr>`;
+  sh('tblBody',rows);
+}
+
+// ═══ CHARTS ═══
+function renderTrend(){
+  // Last 3 months that have flight data
+  const d=RM.filter(r=>r.fh>0&&r.T>0).slice(-3);
+  const labels=d.map(r=>`${r.M} ${r.Y}`);
+  const cphD=d.map(r=>Math.round(r.T/r.fh));
+  const hrsD=d.map(r=>r.fh);
+  if(CH.t)CH.t.destroy();
+  CH.t=new Chart(document.getElementById('trendChart'),{
+    data:{labels,datasets:[
+      {type:'bar',label:'€/Flt Hr',data:cphD,
+       backgroundColor:cphD.map(v=>v>20000?'rgba(239,68,68,.7)':v>13000?'rgba(245,158,11,.7)':'rgba(16,185,129,.7)'),
+       borderColor:cphD.map(v=>v>20000?'#ef4444':v>13000?'#f59e0b':'#10b981'),
+       borderWidth:2,borderRadius:8,yAxisID:'y',order:2,
+       datalabels:{display:true,anchor:'end',align:'top',
+         color:'#e6edf3',font:{size:13,weight:'bold'},
+         formatter:v=>'€'+Math.round(v/1000)+'K'}},
+      {type:'line',label:'Flt Hours',data:hrsD,
+       borderColor:'#0ea5e9',backgroundColor:'rgba(14,165,233,.12)',
+       borderWidth:2.5,pointRadius:7,pointBackgroundColor:'#0ea5e9',
+       pointBorderColor:'#fff',pointBorderWidth:2,
+       fill:true,tension:.3,yAxisID:'y2',order:1,
+       datalabels:{display:false}}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{labels:{color:'#7d8da8',font:{size:11},usePointStyle:true}},
+        tooltip:{backgroundColor:'#1c2230',borderColor:'#2a3448',borderWidth:1,
+          titleColor:'#e6edf3',bodyColor:'#7d8da8',
+          callbacks:{label(c){return c.datasetIndex===0?` €/hr: €${c.raw.toLocaleString()}`:` Hrs: ${c.raw.toFixed(1)}`; }}}
+      },
+      scales:{
+        x:{ticks:{color:'#7d8da8',font:{size:12,weight:'600'}},grid:{color:'rgba(42,52,72,.3)'}},
+        y:{position:'left',ticks:{color:'#7d8da8',font:{size:11},callback:v=>'€'+Math.round(v/1000)+'K'},
+           grid:{color:'rgba(42,52,72,.3)'},suggestedMax:d.length?Math.max(...cphD)*1.25:50000},
+        y2:{position:'right',ticks:{color:'#0ea5e9',font:{size:11},callback:v=>v+'h'},
+            grid:{drawOnChartArea:false}}
+      }}
+  });
+}
+
+function renderKeyCat(){
+  // Last 3 months with flight data
+  const d=RM.filter(r=>r.fh>0&&r.T>0).slice(-3);
+  const labels=d.map(r=>`${r.M} ${r.Y}`);
+  const KEY_CATS=['FUEL','MAINTENANCE','HANDLING FEE','FLIGHT CREW'];
+  const KEY_COLORS=['#f59e0b','#8b5cf6','#0ea5e9','#10b981'];
+  const datasets=KEY_CATS.map((cat,i)=>({
+    label:cat,
+    data:d.map(({Y,mn})=>{
+      const row=RC.find(r=>r.Y===Y&&r.mn===mn&&r.S===cat);
+      return row?row.V:0;
+    }),
+    backgroundColor:KEY_COLORS[i].replace(')',',0.75)').replace('rgb','rgba'),
+    borderColor:KEY_COLORS[i],
+    borderWidth:2,borderRadius:4,
+    datalabels:{
+      display:true,
+      anchor:'end',align:'end',
+      color:'#e6edf3',
+      font:{size:11,weight:'bold'},
+      formatter:v=>v>0?'€'+Math.round(v/1000)+'K':'',
+      offset:2
+    }
+  }));
+  if(CH.kc)CH.kc.destroy();
+  CH.kc=new Chart(document.getElementById('keyCatChart'),{
+    type:'bar',
+    data:{labels,datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{labels:{color:'#7d8da8',font:{size:11},usePointStyle:true,boxWidth:10}},
+        tooltip:{backgroundColor:'#1c2230',borderColor:'#2a3448',borderWidth:1,
+          titleColor:'#e6edf3',bodyColor:'#7d8da8',
+          callbacks:{label(c){return` ${c.dataset.label}: €${Math.round(c.raw).toLocaleString()}`;}}}
+      },
+      scales:{
+        x:{stacked:false,ticks:{color:'#7d8da8',font:{size:12,weight:'600'}},grid:{color:'rgba(42,52,72,.3)'}},
+        y:{stacked:false,ticks:{color:'#7d8da8',font:{size:11},callback:v=>'€'+Math.round(v/1000)+'K'},
+           grid:{color:'rgba(42,52,72,.3)'},grace:'15%'}
+      }}
+  });
+}
+
+// ═══ PERIOD TYPE SETTERS ═══
+function setPT(t){
+  PT=t;
+  ['month','quarter','year','ytd','qtd','mtd'].forEach(x=>document.getElementById('btn-'+x).classList.toggle('active',x===t));
+  document.getElementById('p-m-ctrl').style.display=(t==='month'||t==='mtd')?'flex':'none';
+  document.getElementById('p-q-ctrl').style.display=(t==='quarter'||t==='qtd')?'flex':'none';
+  render();
+}
+function setCPT(t){
+  CPT=t;
+  ['month','quarter','year','ytd','qtd','mtd'].forEach(x=>document.getElementById('cbtn-'+x).classList.toggle('active',x===t));
+  document.getElementById('c-m-ctrl').style.display=(t==='month'||t==='mtd')?'flex':'none';
+  document.getElementById('c-q-ctrl').style.display=(t==='quarter'||t==='qtd')?'flex':'none';
+  render();
+}
+
+// ═══ COMPARE TOGGLE ═══
+function toggleCompare(){
+  showCmp=!showCmp;
+  const btn=document.getElementById('toggleCmpBtn');
+  btn.classList.toggle('on',showCmp);
+  btn.textContent=showCmp?'✕ Remove':'＋ Enable';
+  document.getElementById('cmpRow').style.display=showCmp?'flex':'none';
+  document.getElementById('cmpKpiArea').style.display=showCmp?'block':'none';
+  document.getElementById('connectors').style.display=showCmp?'grid':'none';
+  render();
+}
+
+// ═══ CAT FILTERS ═══
+function buildFilters(){
+  const c=document.getElementById('catFilters');
+  c.innerHTML='<span class="cf-lbl">Categories:</span>';
+  const ab=document.createElement('button');
+  ab.className='cf-btn active';ab.dataset.cat='ALL';ab.textContent='All';
+  ab.onclick=()=>toggleCat(ab);c.appendChild(ab);
+  ALLC.forEach(cat=>{
+    const btn=document.createElement('button');
+    btn.className='cf-btn';btn.dataset.cat=cat;btn.textContent=cat;
+    btn.onclick=()=>toggleCat(btn);c.appendChild(btn);
+  });
+}
+function toggleCat(btn){
+  const cat=btn.dataset.cat;
+  if(cat==='ALL'){
+    ACats=new Set(['ALL']);
+    document.querySelectorAll('.cf-btn').forEach(b=>{
+      b.classList.toggle('active',b.dataset.cat==='ALL');
+      if(b.dataset.cat!=='ALL'){b.style.background='';b.style.borderColor='';b.style.color='';}
+    });
+  } else {
+    ACats.delete('ALL');
+    document.querySelector('[data-cat="ALL"]').classList.remove('active');
+    if(ACats.has(cat)){
+      ACats.delete(cat);btn.classList.remove('active');
+      btn.style.background='';btn.style.borderColor='';btn.style.color='';
+    } else {
+      ACats.add(cat);btn.classList.add('active');
+      btn.style.background=CC[cat]||'#2563eb';btn.style.borderColor=CC[cat]||'#2563eb';btn.style.color='#fff';
+    }
+    if(ACats.size===0){ACats.add('ALL');document.querySelector('[data-cat="ALL"]').classList.add('active');}
+  }
+  render();
+}
+
+// ═══ COST SPIKE ALERTS ═══
+function renderAlerts(){
+  // "Current month" = the most recent month present in RM that has cost data
+  const sorted=[...RM].sort((a,b)=>a.Y!==b.Y?a.Y-b.Y:a.mn-b.mn);
+  const latest=sorted[sorted.length-1]; // Jan 2026
+
+  // 6-month lookback window — the 6 months BEFORE the current month
+  const lookback=[];
+  for(let i=sorted.length-2;i>=0&&lookback.length<6;i--){
+    lookback.push(sorted[i]);
+  }
+
+  if(!latest||lookback.length===0){
+    document.getElementById('alertBody').innerHTML='';
+    document.getElementById('alertEmpty').style.display='block';
+    return;
+  }
+
+  const curLabel=`${latest.M} ${latest.Y}`;
+  document.getElementById('alertBadge').textContent=
+    `current: ${curLabel} · vs 6-mo avg · top 3 · >15% & >€7,000`;
+
+  // Get current month costs per category
+  const curCosts={};
+  RC.filter(r=>r.Y===latest.Y&&r.mn===latest.mn&&r.S!=='REFUND')
+    .forEach(r=>curCosts[r.S]=(curCosts[r.S]||0)+r.V);
+
+  // Get 6-month avg per category (only months where category had spend)
+  const catMonths={}, catSum={};
+  lookback.forEach(({Y,mn})=>{
+    RC.filter(r=>r.Y===Y&&r.mn===mn&&r.S!=='REFUND').forEach(r=>{
+      catSum[r.S]=(catSum[r.S]||0)+r.V;
+      catMonths[r.S]=(catMonths[r.S]||0)+1;
+    });
+  });
+
+  // Compute deviation for each category present this month
+  const alerts=[];
+  Object.entries(curCosts).forEach(([cat,cur])=>{
+    if(cur<=0)return;
+    const cnt=catMonths[cat]||0;
+    if(cnt===0)return; // no prior data — skip
+    const avg=catSum[cat]/cnt;
+    const diffAbs=cur-avg;
+    const diffPct=avg>0?(diffAbs/avg)*100:0;
+    if(diffPct>15&&diffAbs>7000){
+      alerts.push({cat,cur,avg,diffAbs,diffPct,months:cnt});
+    }
+  });
+
+  // Sort by absolute deviation descending, take top 3
+  alerts.sort((a,b)=>b.diffAbs-a.diffAbs);
+  const top3=alerts.slice(0,3);
+
+  const body=document.getElementById('alertBody');
+  const empty=document.getElementById('alertEmpty');
+
+  if(top3.length===0){
+    body.innerHTML='';
+    empty.style.display='block';
+    return;
+  }
+
+  empty.style.display='none';
+  const maxPct=Math.max(...top3.map(a=>a.diffPct));
+
+  body.innerHTML=top3.map((a,i)=>{
+    const col=CC[a.cat]||'#ef4444';
+    const barW=Math.min((a.diffPct/maxPct)*100,100).toFixed(1);
+    const rank=['🥇','🥈','🥉'][i];
+    return `<div class="alert-card">
+      <div class="alert-cat">${rank} Rank ${i+1} spike · based on ${a.months} prior months</div>
+      <div class="alert-name"><div class="alert-dot" style="background:${col}"></div>${a.cat}</div>
+      <div class="alert-row"><span class="alert-lbl">This month (${curLabel})</span><span class="alert-val">€${Math.round(a.cur).toLocaleString()}</span></div>
+      <div class="alert-row"><span class="alert-lbl">6-month avg</span><span class="alert-val">€${Math.round(a.avg).toLocaleString()}</span></div>
+      <hr class="alert-divider">
+      <div class="alert-row">
+        <span class="alert-abs">+€${Math.round(a.diffAbs).toLocaleString()} above avg</span>
+        <span class="alert-pct">+${a.diffPct.toFixed(1)}%</span>
+      </div>
+      <div class="alert-bar-wrap"><div class="alert-bar-fill" style="width:${barW}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ═══ MAIN RENDER ═══
+function render(){
+  const{y,m,q}=pSel();
+  const{y:cy,m:cm2,q:cq}=cSel();
+  const pm=getMonths(PT,y,m,q);
+  const cm=showCmp?getMonths(CPT,cy,cm2,cq):[];
+  const pl=getLabel(PT,y,m,q);
+  const cl=showCmp?getLabel(CPT,cy,cm2,cq):'';
+  sv('pLabel',pl);if(showCmp)sv('cLabel',cl);
+  sv('kpiPL',pl);if(showCmp)sv('kpiCL',cl);
+  const cs=ACats.has('ALL')?'All categories':[...ACats].join(', ');
+  sv('infoBar',`📊 ${pl}${showCmp?' vs '+cl:''} · ${cs}`);
+  sv('catBadge',pl);
+  renderKPIs(pm,cm);renderCat(pm,cm);renderTable(pm,cm);
+  renderTrend();renderKeyCat();renderAlerts();
+}
+
+// ═══ INIT ═══
+buildFilters();
+document.getElementById('pMonth').value=TM;
+document.getElementById('cMonth').value=TM;
+document.getElementById('pQuarter').value=Math.ceil(TM/3);
+document.getElementById('cQuarter').value=Math.ceil(TM/3);
+render();
+</script>
+</body>
+</html>
